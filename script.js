@@ -99,10 +99,12 @@ function moveDraw(e){
   e.preventDefault();
   const pos = getPos(e);
 
-  if(tool === "eraser"){
-    erase(pos.x,pos.y);
-    return;
-  }
+if(tool === "eraser"){
+  showDust(pos.x,pos.y);
+  erase(pos.x,pos.y);
+  return;
+}
+
 
   if(!current) return;
 
@@ -205,6 +207,19 @@ function erase(x,y){
   redraw();
 }
 
+function showDust(x, y) {
+  for(let i = 0; i < 6; i++){
+    const d = document.createElement("div");
+    d.className = "dust";
+    d.style.left = (canvas.offsetLeft + x) + "px";
+    d.style.top  = (canvas.offsetTop + y) + "px";
+    d.style.setProperty("--dx", (Math.random()*30-15)+"px");
+    d.style.setProperty("--dy", (Math.random()*30-15)+"px");
+    document.body.appendChild(d);
+    setTimeout(()=>d.remove(),600);
+  }
+}
+
 
 function distToSeg(px,py,a,b){
   let A=px-a.x,B=py-a.y,C=b.x-a.x,D=b.y-a.y;
@@ -228,15 +243,15 @@ exportBtn.onclick = () => {
     strokes = sheets[index];
     redraw();
 
-    const imgData = canvas.toDataURL("image/png");
+    // compressed JPEG instead of PNG
+    const imgData = canvas.toDataURL("image/jpeg", 0.7);
+
     if (index > 0) pdf.addPage();
-    pdf.addImage(imgData, "PNG", 0, 0, canvas.width, canvas.height);
+    pdf.addImage(imgData, "JPEG", 0, 0, canvas.width, canvas.height);
   });
 
-  // restore current working sheet
   strokes = sheets[originalSheet];
   redraw();
 
   pdf.save("Whiteboard_All_Sheets.pdf");
 };
-
