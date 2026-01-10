@@ -5,12 +5,20 @@
   <link rel="stylesheet" href="style.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
 
+<link rel="icon" type="image/png" sizes="32x32" href="icon.png?v=1">
+<link rel="apple-touch-icon" sizes="180x180" href="icon.png?v=1">
+<link rel="shortcut icon" href="icon.png?v=1">
+
+
+<link rel="manifest" href="manifest.json">
+
 </head>
 <body>
 
 <div id="toolbar">
-  <button id="pen">Pen</button>
-  <button id="eraser">Eraser</button>
+  <button id="pen">✏️</button>
+  <button id="eraser">🧼</button>
+  <button id="lasso">🪢</button>
 
   <input type="color" id="colorPicker" value="#000000">
   <input type="range" id="sizePicker" min="1" max="12" value="2" title="Pen Size">
@@ -22,13 +30,18 @@
     <option value="circle">Circle</option>
   </select>
 
-  <button id="newSheet">➕ Sheet</button>
+  <button id="newSheet">➕</button>
   <select id="sheetSelect"></select>
-  <button id="exportPdf">📥Download</button>
-
+  <button id="exportPdf">📥</button>
 </div>
 
+
 <canvas id="board"></canvas>
+<div id="lassoMenu">
+  <button id="deleteSel">🗑 Delete</button>
+  <button id="cancelSel">✖ Cancel</button>
+</div>
+
 
 <script src="script.js"></script>
 </body>

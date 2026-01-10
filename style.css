@@ -11,7 +11,7 @@ body{
   top:16px;
   left:50%;
   transform:translateX(-50%);
-  background:rgba(255,255,255,0.15);
+  background:rgba(123, 123, 123, 0.15);
   backdrop-filter:blur(18px);
   border-radius:16px;
   padding:10px 14px;
@@ -24,9 +24,9 @@ body{
 #toolbar button,
 #toolbar select,
 #toolbar input{
-  background:rgba(255,255,255,0.18);
+  background:#2d4874;
   border:none;
-  color:white;
+  color:rgb(255, 255, 255);
   padding:7px 14px;
   border-radius:12px;
   cursor:pointer;
@@ -40,7 +40,7 @@ body{
 }
 
 /* Dropdown text visibility */
-select option{ color:black; }
+select option{ color:black;border-radius:12px; }
 
 /* Canvas */
 #board{
@@ -67,4 +67,22 @@ select option{ color:black; }
 @keyframes dustFade {
   from { transform: translate(0,0) scale(1); opacity:1; }
   to   { transform: translate(var(--dx), var(--dy)) scale(0); opacity:0; }
+}
+#lassoMenu{
+  position:absolute;
+  display:none;
+  gap:6px;
+  background:#020617;
+  padding:6px;
+  border-radius:10px;
+  box-shadow:0 12px 25px rgba(0,0,0,.6);
+  z-index:1000;
+}
+#lassoMenu button{
+  background:#1e293b;
+  color:white;
+  border:none;
+  padding:4px 10px;
+  border-radius:6px;
+  cursor:pointer;
 }

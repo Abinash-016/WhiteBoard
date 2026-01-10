@@ -6,6 +6,9 @@ const sizePicker = document.getElementById("sizePicker");
 const newSheetBtn = document.getElementById("newSheet");
 const sheetSelect = document.getElementById("sheetSelect");
 const exportBtn = document.getElementById("exportPdf");
+const lassoMenu = document.getElementById("lassoMenu");
+const deleteSel = document.getElementById("deleteSel");
+const cancelSel = document.getElementById("cancelSel");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight - 50;
@@ -15,6 +18,12 @@ ctx.lineJoin = "round";
 
 let tool = "pen";
 let drawing = false;
+
+let lassoPoints = [];
+let selectedStrokes = [];
+let movingSelection = false;
+let lastMove = null;
+
 
 let sheets = [[]];
 let currentSheet = 0;
@@ -27,6 +36,8 @@ let startX = 0, startY = 0;
 document.getElementById("pen").onclick = () => tool = "pen";
 document.getElementById("eraser").onclick = () => tool = "eraser";
 shapeSel.onchange = () => tool = shapeSel.value;
+document.getElementById("lasso").onclick = () => tool = "lasso";
+
 
 /* ===== Sheet System ===== */
 function updateSheetList(){
@@ -84,6 +95,23 @@ function startDraw(e){
   startX = pos.x;
   startY = pos.y;
 
+if(tool === "lasso"){
+  const p = getPos(e);
+
+  if(selectedStrokes.length){
+    movingSelection = true;
+    lastMove = p;
+    return;
+  }
+
+  lassoMenu.style.display="none";
+  selectedStrokes=[];
+  lassoPoints=[p];
+  return;
+}
+
+
+
   if(tool === "pen"){
     current = {
       color: colorPicker.value,
@@ -104,6 +132,38 @@ if(tool === "eraser"){
   erase(pos.x,pos.y);
   return;
 }
+if(tool === "lasso"){
+
+  if(movingSelection){
+    const p=getPos(e);
+    const dx=p.x-lastMove.x;
+    const dy=p.y-lastMove.y;
+
+    selectedStrokes.forEach(s=>{
+      if(s.points) s.points.forEach(pt=>{pt.x+=dx;pt.y+=dy});
+      if(s.p1){
+        s.p1.x+=dx; s.p1.y+=dy;
+        s.p2.x+=dx; s.p2.y+=dy;
+      }
+    });
+
+    lastMove=p;
+    redraw();
+    return;
+  }
+
+  lassoPoints.push(getPos(e));
+  redraw();
+
+  ctx.setLineDash([6,4]);
+  ctx.strokeStyle="#60a5fa";
+  ctx.beginPath();
+  ctx.moveTo(lassoPoints[0].x,lassoPoints[0].y);
+  lassoPoints.forEach(pt=>ctx.lineTo(pt.x,pt.y));
+  ctx.stroke();
+  ctx.setLineDash([]);
+  return;
+}
 
 
   if(!current) return;
@@ -121,6 +181,17 @@ if(tool === "eraser"){
 
 function endDraw(e){
   drawing=false;
+
+if(tool==="lasso"){
+  if(!movingSelection) applyLasso();
+  movingSelection=false;
+  lassoPoints=[];
+  redraw();
+  return;
+}
+
+
+
   if(["line","rect","circle"].includes(tool)){
     const pos=getPos(e);
     strokes.push({
@@ -207,6 +278,33 @@ function erase(x,y){
   redraw();
 }
 
+function applyLasso(){
+  selectedStrokes = strokes.filter(stroke=>{
+    if(stroke.points) return stroke.points.some(p => inside(p, lassoPoints));
+    if(stroke.p1) return inside(stroke.p1, lassoPoints) || inside(stroke.p2, lassoPoints);
+    return false;
+  });
+
+  if(selectedStrokes.length){
+    const p = lassoPoints[0];
+    lassoMenu.style.left = (canvas.offsetLeft + p.x) + "px";
+    lassoMenu.style.top  = (canvas.offsetTop + p.y) + "px";
+    lassoMenu.style.display = "flex";
+  }
+}
+
+function inside(p, poly){
+  let x=p.x,y=p.y,inside=false;
+  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
+    let xi=poly[i].x, yi=poly[i].y;
+    let xj=poly[j].x, yj=poly[j].y;
+    let intersect = ((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi);
+    if(intersect) inside = !inside;
+  }
+  return inside;
+}
+
+
 function showDust(x, y) {
   for(let i = 0; i < 6; i++){
     const d = document.createElement("div");
@@ -254,4 +352,16 @@ exportBtn.onclick = () => {
   redraw();
 
   pdf.save("Whiteboard_All_Sheets.pdf");
+};
+deleteSel.onclick=()=>{
+  strokes = sheets[currentSheet] = strokes.filter(s=>!selectedStrokes.includes(s));
+  selectedStrokes=[];
+  lassoMenu.style.display="none";
+  redraw();
+};
+
+cancelSel.onclick=()=>{
+  selectedStrokes=[];
+  lassoMenu.style.display="none";
+  redraw();
 };
