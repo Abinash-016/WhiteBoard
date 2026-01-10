@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Whiteboard Core</title>
+  <link rel="stylesheet" href="style.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+
+</head>
+<body>
+
+<div id="toolbar">
+  <button id="pen">Pen</button>
+  <button id="eraser">Eraser</button>
+
+  <input type="color" id="colorPicker" value="#000000">
+  <input type="range" id="sizePicker" min="1" max="12" value="2" title="Pen Size">
+
+  <select id="shape">
+    <option value="">Shapes</option>
+    <option value="line">Line</option>
+    <option value="rect">Rectangle</option>
+    <option value="circle">Circle</option>
+  </select>
+
+  <button id="newSheet">➕ Sheet</button>
+  <select id="sheetSelect"></select>
+  <button id="exportPdf">📥Download</button>
+
+</div>
+
+<canvas id="board"></canvas>
+
+<script src="script.js"></script>
+</body>
+</html>
