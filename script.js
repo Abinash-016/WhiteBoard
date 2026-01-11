@@ -352,24 +352,24 @@ function distToSeg(px, py, a, b) {
 /* ===== EXPORT ALL SHEETS TO ONE PDF ===== */
 exportBtn.onclick = () => {
   const { jsPDF } = window.jspdf;
-  const pdf = new jsPDF("landscape", "px", [canvas.width, canvas.height]);
+  const pdf = new jsPDF("landscape","px",[canvas.width,canvas.height]);
 
-  const originalSheet = currentSheet;
+  const TILE = 1024; // safe chunk size
+  const orig = currentSheet;
 
-  sheets.forEach((sheet, index) => {
-
+  sheets.forEach((sheet, idx)=>{
     const off = document.createElement("canvas");
     off.width = canvas.width;
     off.height = canvas.height;
     const octx = off.getContext("2d");
 
-    octx.fillStyle = "#ffffff";
+    octx.fillStyle="#fff";
     octx.fillRect(0,0,off.width,off.height);
 
-    // render strokes manually to offscreen canvas
+    // draw strokes
     sheet.forEach(s=>{
-      octx.strokeStyle = s.color || "#000";
-      octx.lineWidth = s.size || 2;
+      octx.strokeStyle=s.color||"#000";
+      octx.lineWidth=s.size||2;
       octx.lineCap="round";
       octx.lineJoin="round";
 
@@ -396,14 +396,21 @@ exportBtn.onclick = () => {
       }
     });
 
-    const img = off.toDataURL("image/jpeg",0.75);
+    // TILE export
+    const tile = document.createElement("canvas");
+    const tctx = tile.getContext("2d");
+    tile.width=TILE;
+    tile.height=TILE;
 
-    if(index>0) pdf.addPage();
+    let img = off.toDataURL("image/jpeg",0.7);
+
+    if(idx>0) pdf.addPage();
     pdf.addImage(img,"JPEG",0,0,canvas.width,canvas.height);
   });
 
   pdf.save("Whiteboard_All_Sheets.pdf");
 };
+
 
 deleteSel.onclick = () => {
   strokes = sheets[currentSheet] = strokes.filter(
