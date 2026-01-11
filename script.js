@@ -356,42 +356,55 @@ exportBtn.onclick = () => {
 
   const originalSheet = currentSheet;
 
-sheets.forEach((sheet, index) => {
-  strokes = sheets[index];
-  redraw();
+  sheets.forEach((sheet, index) => {
 
-  const temp = document.createElement("canvas");
-  temp.width = canvas.width;
-  temp.height = canvas.height;
-  const tctx = temp.getContext("2d");
+    const off = document.createElement("canvas");
+    off.width = canvas.width;
+    off.height = canvas.height;
+    const octx = off.getContext("2d");
 
-  tctx.fillStyle = "#ffffff";
-  tctx.fillRect(0,0,temp.width,temp.height);
-  tctx.drawImage(canvas,0,0);
+    octx.fillStyle = "#ffffff";
+    octx.fillRect(0,0,off.width,off.height);
 
-  const imgData = temp.toDataURL("image/jpeg", 0.75);
+    // render strokes manually to offscreen canvas
+    sheet.forEach(s=>{
+      octx.strokeStyle = s.color || "#000";
+      octx.lineWidth = s.size || 2;
+      octx.lineCap="round";
+      octx.lineJoin="round";
 
-  if (index > 0) pdf.addPage();
-  pdf.addImage(imgData, "JPEG", 0, 0, canvas.width, canvas.height);
-});
-    // compressed JPEG instead of PNG
-    const temp = document.createElement("canvas");
-    temp.width = canvas.width;
-    temp.height = canvas.height;
-    const tctx = temp.getContext("2d");
+      if(s.points){
+        octx.beginPath();
+        octx.moveTo(s.points[0].x,s.points[0].y);
+        s.points.forEach(p=>octx.lineTo(p.x,p.y));
+        octx.stroke();
+      }
+      else if(s.tool==="line"){
+        octx.beginPath();
+        octx.moveTo(s.p1.x,s.p1.y);
+        octx.lineTo(s.p2.x,s.p2.y);
+        octx.stroke();
+      }
+      else if(s.tool==="rect"){
+        octx.strokeRect(s.p1.x,s.p1.y,s.p2.x-s.p1.x,s.p2.y-s.p1.y);
+      }
+      else if(s.tool==="circle"){
+        let r=Math.hypot(s.p2.x-s.p1.x,s.p2.y-s.p1.y);
+        octx.beginPath();
+        octx.arc(s.p1.x,s.p1.y,r,0,Math.PI*2);
+        octx.stroke();
+      }
+    });
 
-    tctx.fillStyle = "#ffffff";
-    tctx.fillRect(0, 0, temp.width, temp.height);
-    tctx.drawImage(canvas, 0, 0);
+    const img = off.toDataURL("image/jpeg",0.75);
 
-    const imgData = temp.toDataURL("image/jpeg", 0.75);
-
-
-  strokes = sheets[originalSheet];
-  redraw();
+    if(index>0) pdf.addPage();
+    pdf.addImage(img,"JPEG",0,0,canvas.width,canvas.height);
+  });
 
   pdf.save("Whiteboard_All_Sheets.pdf");
 };
+
 deleteSel.onclick = () => {
   strokes = sheets[currentSheet] = strokes.filter(
     (s) => !selectedStrokes.includes(s)
