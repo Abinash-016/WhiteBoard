@@ -12,6 +12,16 @@ const cancelSel = document.getElementById("cancelSel");
 
 canvas.width = window.innerWidth;
 canvas.height = window.innerHeight - 50;
+function resizeCanvas(){
+  const prev = ctx.getImageData(0,0,canvas.width,canvas.height);
+
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight - 80;
+
+  ctx.putImageData(prev,0,0);
+  redraw();
+}
+
 
 ctx.lineCap = "round";
 ctx.lineJoin = "round";
@@ -24,31 +34,30 @@ let selectedStrokes = [];
 let movingSelection = false;
 let lastMove = null;
 
-
 let sheets = [[]];
 let currentSheet = 0;
 let strokes = sheets[currentSheet];
 
 let current = null;
-let startX = 0, startY = 0;
+let startX = 0,
+  startY = 0;
 
 /* ===== Tool Buttons ===== */
-document.getElementById("pen").onclick = () => tool = "pen";
-document.getElementById("eraser").onclick = () => tool = "eraser";
-shapeSel.onchange = () => tool = shapeSel.value;
-document.getElementById("lasso").onclick = () => tool = "lasso";
-
+document.getElementById("pen").onclick = () => (tool = "pen");
+document.getElementById("eraser").onclick = () => (tool = "eraser");
+shapeSel.onchange = () => (tool = shapeSel.value);
+document.getElementById("lasso").onclick = () => (tool = "lasso");
 
 /* ===== Sheet System ===== */
-function updateSheetList(){
-  sheetSelect.innerHTML="";
-  sheets.forEach((_,i)=>{
-    let opt=document.createElement("option");
-    opt.value=i;
-    opt.text="Sheet "+(i+1);
+function updateSheetList() {
+  sheetSelect.innerHTML = "";
+  sheets.forEach((_, i) => {
+    let opt = document.createElement("option");
+    opt.value = i;
+    opt.text = "Sheet " + (i + 1);
     sheetSelect.appendChild(opt);
   });
-  sheetSelect.value=currentSheet;
+  sheetSelect.value = currentSheet;
 }
 
 newSheetBtn.onclick = () => {
@@ -68,12 +77,12 @@ sheetSelect.onchange = () => {
 updateSheetList();
 
 /* ===== Position Helper ===== */
-function getPos(e){
+function getPos(e) {
   const rect = canvas.getBoundingClientRect();
-  if(e.touches){
+  if (e.touches) {
     return {
       x: e.touches[0].clientX - rect.left,
-      y: e.touches[0].clientY - rect.top
+      y: e.touches[0].clientY - rect.top,
     };
   }
   return { x: e.offsetX, y: e.offsetY };
@@ -83,90 +92,92 @@ function getPos(e){
 canvas.addEventListener("mousedown", startDraw);
 canvas.addEventListener("mousemove", moveDraw);
 canvas.addEventListener("mouseup", endDraw);
-canvas.addEventListener("touchstart", startDraw,{passive:false});
-canvas.addEventListener("touchmove", moveDraw,{passive:false});
+canvas.addEventListener("touchstart", startDraw, { passive: false });
+canvas.addEventListener("touchmove", moveDraw, { passive: false });
 canvas.addEventListener("touchend", endDraw);
 
 /* ===== Drawing Logic ===== */
-function startDraw(e){
+function startDraw(e) {
   e.preventDefault();
   drawing = true;
   const pos = getPos(e);
   startX = pos.x;
   startY = pos.y;
 
-if(tool === "lasso"){
-  const p = getPos(e);
+  if (tool === "lasso") {
+    const p = getPos(e);
 
-  if(selectedStrokes.length){
-    movingSelection = true;
-    lastMove = p;
+    if (selectedStrokes.length) {
+      movingSelection = true;
+      lastMove = p;
+      return;
+    }
+
+    lassoMenu.style.display = "none";
+    selectedStrokes = [];
+    lassoPoints = [p];
     return;
   }
 
-  lassoMenu.style.display="none";
-  selectedStrokes=[];
-  lassoPoints=[p];
-  return;
-}
-
-
-
-  if(tool === "pen"){
+  if (tool === "pen") {
     current = {
       color: colorPicker.value,
       size: sizePicker.value,
-      points: [{ x: startX, y: startY }]
+      points: [{ x: startX, y: startY }],
     };
     strokes.push(current);
   }
 }
 
-function moveDraw(e){
-  if(!drawing) return;
+function moveDraw(e) {
+  if (!drawing) return;
   e.preventDefault();
   const pos = getPos(e);
 
-if(tool === "eraser"){
-  showDust(pos.x,pos.y);
-  erase(pos.x,pos.y);
-  return;
-}
-if(tool === "lasso"){
+  if (tool === "eraser") {
+    showDust(pos.x, pos.y);
+    erase(pos.x, pos.y);
+    return;
+  }
+  if (tool === "lasso") {
+    if (movingSelection) {
+      const p = getPos(e);
+      const dx = p.x - lastMove.x;
+      const dy = p.y - lastMove.y;
 
-  if(movingSelection){
-    const p=getPos(e);
-    const dx=p.x-lastMove.x;
-    const dy=p.y-lastMove.y;
+      selectedStrokes.forEach((s) => {
+        if (s.points)
+          s.points.forEach((pt) => {
+            pt.x += dx;
+            pt.y += dy;
+          });
+        if (s.p1) {
+          s.p1.x += dx;
+          s.p1.y += dy;
+          s.p2.x += dx;
+          s.p2.y += dy;
+        }
+      });
 
-    selectedStrokes.forEach(s=>{
-      if(s.points) s.points.forEach(pt=>{pt.x+=dx;pt.y+=dy});
-      if(s.p1){
-        s.p1.x+=dx; s.p1.y+=dy;
-        s.p2.x+=dx; s.p2.y+=dy;
-      }
-    });
+      lastMove = p;
+      redraw();
+      return;
+    }
 
-    lastMove=p;
+    lassoPoints.push(getPos(e));
     redraw();
+
+    ctx.setLineDash([6, 4]);
+    ctx.strokeStyle = "#60a5fa";
+    ctx.beginPath();
+    ctx.moveTo(lassoPoints[0].x, lassoPoints[0].y);
+    lassoPoints.forEach((pt) => ctx.lineTo(pt.x, pt.y));
+    ctx.stroke();
+    ctx.setLineDash([]);
     return;
   }
 
-  lassoPoints.push(getPos(e));
-  redraw();
-
-  ctx.setLineDash([6,4]);
-  ctx.strokeStyle="#60a5fa";
-  ctx.beginPath();
-  ctx.moveTo(lassoPoints[0].x,lassoPoints[0].y);
-  lassoPoints.forEach(pt=>ctx.lineTo(pt.x,pt.y));
-  ctx.stroke();
-  ctx.setLineDash([]);
-  return;
-}
-
-
-  if(!current) return;
+  if (!current) return;
 
   current.points.push(pos);
   ctx.strokeStyle = current.color;
@@ -174,101 +185,100 @@ if(tool === "lasso"){
 
   const pts = current.points;
   ctx.beginPath();
-  ctx.moveTo(pts[pts.length-2].x,pts[pts.length-2].y);
-  ctx.lineTo(pos.x,pos.y);
+  ctx.moveTo(pts[pts.length - 2].x, pts[pts.length - 2].y);
+  ctx.lineTo(pos.x, pos.y);
   ctx.stroke();
 }
 
-function endDraw(e){
-  drawing=false;
+function endDraw(e) {
+  drawing = false;
 
-if(tool==="lasso"){
-  if(!movingSelection) applyLasso();
-  movingSelection=false;
-  lassoPoints=[];
-  redraw();
-  return;
-}
+  if (tool === "lasso") {
+    if (!movingSelection) applyLasso();
+    movingSelection = false;
+    lassoPoints = [];
+    redraw();
+    return;
+  }
 
-
-
-  if(["line","rect","circle"].includes(tool)){
-    const pos=getPos(e);
+  if (["line", "rect", "circle"].includes(tool)) {
+    const pos = getPos(e);
     strokes.push({
       tool,
-      color:colorPicker.value,
-      size:sizePicker.value,
-      p1:{x:startX,y:startY},
-      p2:{x:pos.x,y:pos.y}
+      color: colorPicker.value,
+      size: sizePicker.value,
+      p1: { x: startX, y: startY },
+      p2: { x: pos.x, y: pos.y },
     });
     redraw();
   }
-  current=null;
+  current = null;
 }
 
 /* ===== Redraw ===== */
-function redraw(){
-  ctx.clearRect(0,0,canvas.width,canvas.height);
-  strokes.forEach(s=>{
-    ctx.strokeStyle=s.color||"#000";
-    ctx.lineWidth=s.size||2;
+function redraw() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  strokes.forEach((s) => {
+    ctx.strokeStyle = s.color || "#000";
+    ctx.lineWidth = s.size || 2;
 
-    if(s.points){
+    if (s.points) {
       ctx.beginPath();
-      ctx.moveTo(s.points[0].x,s.points[0].y);
-      s.points.forEach(p=>ctx.lineTo(p.x,p.y));
+      ctx.moveTo(s.points[0].x, s.points[0].y);
+      s.points.forEach((p) => ctx.lineTo(p.x, p.y));
       ctx.stroke();
-    }else if(s.tool==="line"){
+    } else if (s.tool === "line") {
       ctx.beginPath();
-      ctx.moveTo(s.p1.x,s.p1.y);
-      ctx.lineTo(s.p2.x,s.p2.y);
+      ctx.moveTo(s.p1.x, s.p1.y);
+      ctx.lineTo(s.p2.x, s.p2.y);
       ctx.stroke();
-    }else if(s.tool==="rect"){
-      ctx.strokeRect(s.p1.x,s.p1.y,s.p2.x-s.p1.x,s.p2.y-s.p1.y);
-    }else if(s.tool==="circle"){
-      let r=Math.hypot(s.p2.x-s.p1.x,s.p2.y-s.p1.y);
+    } else if (s.tool === "rect") {
+      ctx.strokeRect(s.p1.x, s.p1.y, s.p2.x - s.p1.x, s.p2.y - s.p1.y);
+    } else if (s.tool === "circle") {
+      let r = Math.hypot(s.p2.x - s.p1.x, s.p2.y - s.p1.y);
       ctx.beginPath();
-      ctx.arc(s.p1.x,s.p1.y,r,0,Math.PI*2);
+      ctx.arc(s.p1.x, s.p1.y, r, 0, Math.PI * 2);
       ctx.stroke();
     }
   });
 }
 
 /* ===== Eraser ===== */
-function erase(x,y){
-  strokes = sheets[currentSheet] = strokes.filter(stroke => {
-
+function erase(x, y) {
+  strokes = sheets[currentSheet] = strokes.filter((stroke) => {
     // Pen strokes
-    if(stroke.points){
-      for(let i=0;i<stroke.points.length-1;i++){
-        if(distToSeg(x,y,stroke.points[i],stroke.points[i+1]) < 8) return false;
+    if (stroke.points) {
+      for (let i = 0; i < stroke.points.length - 1; i++) {
+        if (distToSeg(x, y, stroke.points[i], stroke.points[i + 1]) < 8)
+          return false;
       }
       return true;
     }
 
     // Line
-    if(stroke.tool === "line"){
-      if(distToSeg(x,y,stroke.p1,stroke.p2) < 8) return false;
+    if (stroke.tool === "line") {
+      if (distToSeg(x, y, stroke.p1, stroke.p2) < 8) return false;
       return true;
     }
 
     // Rectangle
-    if(stroke.tool === "rect"){
-      let {p1,p2} = stroke;
-      if(
-        distToSeg(x,y,{x:p1.x,y:p1.y},{x:p2.x,y:p1.y}) < 8 ||
-        distToSeg(x,y,{x:p2.x,y:p1.y},{x:p2.x,y:p2.y}) < 8 ||
-        distToSeg(x,y,{x:p2.x,y:p2.y},{x:p1.x,y:p2.y}) < 8 ||
-        distToSeg(x,y,{x:p1.x,y:p2.y},{x:p1.x,y:p1.y}) < 8
-      ) return false;
+    if (stroke.tool === "rect") {
+      let { p1, p2 } = stroke;
+      if (
+        distToSeg(x, y, { x: p1.x, y: p1.y }, { x: p2.x, y: p1.y }) < 8 ||
+        distToSeg(x, y, { x: p2.x, y: p1.y }, { x: p2.x, y: p2.y }) < 8 ||
+        distToSeg(x, y, { x: p2.x, y: p2.y }, { x: p1.x, y: p2.y }) < 8 ||
+        distToSeg(x, y, { x: p1.x, y: p2.y }, { x: p1.x, y: p1.y }) < 8
+      )
+        return false;
       return true;
     }
 
     // Circle
-    if(stroke.tool === "circle"){
-      let r = Math.hypot(stroke.p2.x-stroke.p1.x, stroke.p2.y-stroke.p1.y);
-      let d = Math.hypot(x-stroke.p1.x, y-stroke.p1.y);
-      if(Math.abs(d-r) < 8) return false;
+    if (stroke.tool === "circle") {
+      let r = Math.hypot(stroke.p2.x - stroke.p1.x, stroke.p2.y - stroke.p1.y);
+      let d = Math.hypot(x - stroke.p1.x, y - stroke.p1.y);
+      if (Math.abs(d - r) < 8) return false;
       return true;
     }
 
@@ -278,53 +288,62 @@ function erase(x,y){
   redraw();
 }
 
-function applyLasso(){
-  selectedStrokes = strokes.filter(stroke=>{
-    if(stroke.points) return stroke.points.some(p => inside(p, lassoPoints));
-    if(stroke.p1) return inside(stroke.p1, lassoPoints) || inside(stroke.p2, lassoPoints);
+function applyLasso() {
+  selectedStrokes = strokes.filter((stroke) => {
+    if (stroke.points) return stroke.points.some((p) => inside(p, lassoPoints));
+    if (stroke.p1)
+      return inside(stroke.p1, lassoPoints) || inside(stroke.p2, lassoPoints);
     return false;
   });
 
-  if(selectedStrokes.length){
+  if (selectedStrokes.length) {
     const p = lassoPoints[0];
-    lassoMenu.style.left = (canvas.offsetLeft + p.x) + "px";
-    lassoMenu.style.top  = (canvas.offsetTop + p.y) + "px";
+    lassoMenu.style.left = canvas.offsetLeft + p.x + "px";
+    lassoMenu.style.top = canvas.offsetTop + p.y + "px";
     lassoMenu.style.display = "flex";
   }
 }
 
-function inside(p, poly){
-  let x=p.x,y=p.y,inside=false;
-  for(let i=0,j=poly.length-1;i<poly.length;j=i++){
-    let xi=poly[i].x, yi=poly[i].y;
-    let xj=poly[j].x, yj=poly[j].y;
-    let intersect = ((yi>y)!=(yj>y)) && (x < (xj-xi)*(y-yi)/(yj-yi)+xi);
-    if(intersect) inside = !inside;
+function inside(p, poly) {
+  let x = p.x,
+    y = p.y,
+    inside = false;
+  for (let i = 0, j = poly.length - 1; i < poly.length; j = i++) {
+    let xi = poly[i].x,
+      yi = poly[i].y;
+    let xj = poly[j].x,
+      yj = poly[j].y;
+    let intersect =
+      yi > y != yj > y && x < ((xj - xi) * (y - yi)) / (yj - yi) + xi;
+    if (intersect) inside = !inside;
   }
   return inside;
 }
 
-
 function showDust(x, y) {
-  for(let i = 0; i < 6; i++){
+  for (let i = 0; i < 6; i++) {
     const d = document.createElement("div");
     d.className = "dust";
-    d.style.left = (canvas.offsetLeft + x) + "px";
-    d.style.top  = (canvas.offsetTop + y) + "px";
-    d.style.setProperty("--dx", (Math.random()*30-15)+"px");
-    d.style.setProperty("--dy", (Math.random()*30-15)+"px");
+    d.style.left = canvas.offsetLeft + x + "px";
+    d.style.top = canvas.offsetTop + y + "px";
+    d.style.setProperty("--dx", Math.random() * 30 - 15 + "px");
+    d.style.setProperty("--dy", Math.random() * 30 - 15 + "px");
     document.body.appendChild(d);
-    setTimeout(()=>d.remove(),600);
+    setTimeout(() => d.remove(), 600);
   }
 }
 
-
-function distToSeg(px,py,a,b){
-  let A=px-a.x,B=py-a.y,C=b.x-a.x,D=b.y-a.y;
-  let dot=A*C+B*D,len=C*C+D*D;
-  let t=Math.max(0,Math.min(1,dot/len));
-  let ex=a.x+t*C,ey=a.y+t*D;
-  return Math.hypot(px-ex,py-ey);
+function distToSeg(px, py, a, b) {
+  let A = px - a.x,
+    B = py - a.y,
+    C = b.x - a.x,
+    D = b.y - a.y;
+  let dot = A * C + B * D,
+    len = C * C + D * D;
+  let t = Math.max(0, Math.min(1, dot / len));
+  let ex = a.x + t * C,
+    ey = a.y + t * D;
+  return Math.hypot(px - ex, py - ey);
 }
 
 /* ===== PDF EXPORT ===== */
@@ -337,31 +356,44 @@ exportBtn.onclick = () => {
 
   const originalSheet = currentSheet;
 
-  sheets.forEach((sheet, index) => {
-    strokes = sheets[index];
-    redraw();
+sheets.forEach((sheet, index) => {
+  strokes = sheets[index];
+  redraw();
 
-    // compressed JPEG instead of PNG
-    const imgData = canvas.toDataURL("image/jpeg", 0.7);
+  const temp = document.createElement("canvas");
+  temp.width = canvas.width;
+  temp.height = canvas.height;
+  const tctx = temp.getContext("2d");
 
-    if (index > 0) pdf.addPage();
-    pdf.addImage(imgData, "JPEG", 0, 0, canvas.width, canvas.height);
-  });
+  tctx.fillStyle = "#ffffff";
+  tctx.fillRect(0,0,temp.width,temp.height);
+  tctx.drawImage(canvas,0,0);
+
+  const imgData = temp.toDataURL("image/jpeg", 0.75);
+
+  if (index > 0) pdf.addPage();
+  pdf.addImage(imgData, "JPEG", 0, 0, canvas.width, canvas.height);
+});
+
 
   strokes = sheets[originalSheet];
   redraw();
 
   pdf.save("Whiteboard_All_Sheets.pdf");
 };
-deleteSel.onclick=()=>{
-  strokes = sheets[currentSheet] = strokes.filter(s=>!selectedStrokes.includes(s));
-  selectedStrokes=[];
-  lassoMenu.style.display="none";
+deleteSel.onclick = () => {
+  strokes = sheets[currentSheet] = strokes.filter(
+    (s) => !selectedStrokes.includes(s)
+  );
+  selectedStrokes = [];
+  lassoMenu.style.display = "none";
   redraw();
 };
 
-cancelSel.onclick=()=>{
-  selectedStrokes=[];
-  lassoMenu.style.display="none";
+cancelSel.onclick = () => {
+  selectedStrokes = [];
+  lassoMenu.style.display = "none";
   redraw();
 };
+window.addEventListener("resize", resizeCanvas);
+window.addEventListener("orientationchange", resizeCanvas);
