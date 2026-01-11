@@ -374,6 +374,17 @@ sheets.forEach((sheet, index) => {
   if (index > 0) pdf.addPage();
   pdf.addImage(imgData, "JPEG", 0, 0, canvas.width, canvas.height);
 });
+    // compressed JPEG instead of PNG
+    const temp = document.createElement("canvas");
+    temp.width = canvas.width;
+    temp.height = canvas.height;
+    const tctx = temp.getContext("2d");
+
+    tctx.fillStyle = "#ffffff";
+    tctx.fillRect(0, 0, temp.width, temp.height);
+    tctx.drawImage(canvas, 0, 0);
+
+    const imgData = temp.toDataURL("image/jpeg", 0.75);
 
 
   strokes = sheets[originalSheet];
